@@ -85,6 +85,7 @@ def convert_mth_strings ( mth_string ):
 
 entity_id = "E5022_WCC_gov"
 url = "http://www.spotlightonspend.org.uk/259/City+of+Westminster+Council/Downloads"
+new_url = 'https://www.westminster.gov.uk/spending-procurement-and-data-transparency'
 user_agent = {'User-agent': 'Mozilla/5.0'}
 errors = 0
 data = []
@@ -108,6 +109,17 @@ for block in blocks:
         csvMth = csvfile[:3]
         csvMth = convert_mth_strings(csvMth.upper())
         data.append([csvYr, csvMth, url, requestdata])
+new_html = urllib2.urlopen(new_url)
+archive_soup = BeautifulSoup(new_html, 'lxml')
+rows = archive_soup.find_all('a')
+for row in rows:
+    link = row['href']
+    if 'Q' in row.text and ('xpenditure' in link or 'contract' in link and '2015' not in link):
+        title = row.text.strip()
+        csvYr = title[:4]
+        csvMth = title.split(',')[1].strip()[:2]
+        requestdata = None
+        data.append([csvYr, csvMth, link, requestdata])
 
 #### STORE DATA 1.0
 
