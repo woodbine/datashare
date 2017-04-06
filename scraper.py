@@ -46,12 +46,15 @@ def validateURL(url, requestdata):
             count += 1
             r = requests.post(url, data= requestdata, allow_redirects=True, timeout=20)
         sourceFilename = r.headers.get('Content-Disposition')
+        ext = 0
         if sourceFilename:
             ext = os.path.splitext(sourceFilename)[1].replace('"', '').replace(';', '').replace(' ', '')[:4]
-        else:
+        if not ext:
             ext = os.path.splitext(url)[1]
+        if r.status_code == 405:
+            r = requests.get(url, timeout=20)
         validURL = r.status_code == 200
-        validFiletype = ext.lower() in ['.csv', '.xls', '.xlsx', '.zip']
+        validFiletype = ext.lower() in ['.csv', '.CSV', '.xls', '.xlsx', '.zip']
         return validURL, validFiletype
     except:
         print ("Error validating URL.")
@@ -111,15 +114,18 @@ for block in blocks:
         data.append([csvYr, csvMth, url, requestdata])
 new_html = urllib2.urlopen(new_url)
 archive_soup = BeautifulSoup(new_html, 'lxml')
-rows = archive_soup.find_all('a')
+rows = archive_soup.find_all('div', id=re.compile('procurement-\d+-\d+'))
 for row in rows:
-    link = row['href']
-    if 'Q' in row.text and ('xpenditure' in link or 'contract' in link and '2015' not in link):
-        title = row.text.strip()
-        csvYr = title[:4]
-        csvMth = title.split(',')[1].strip()[:2]
-        requestdata = None
-        data.append([csvYr, csvMth, link, requestdata])
+    links = row.find_all('a')
+    for link in links:
+        url = link['href']
+        if 'xpenditure' in url or 'expendidure' in url or 'q1_final.xlsx' in url or\
+                'december_14_v1' in url or 'q4_-_from_karim.xlsx' in url:
+                title = link.text.strip()
+                csvYr = re.search('(\d{4})', row['id']).group(1)
+                csvMth = title.split()[0]
+                requestdata = None
+                data.append([csvYr, csvMth, url, requestdata])
 
 #### STORE DATA 1.0
 
