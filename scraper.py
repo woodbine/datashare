@@ -138,7 +138,7 @@ for row in data:
     valid = validate(filename, file_url, requestdata)
 
     if valid == True:
-        scraperwiki.sqlite.save(unique_keys=['f'], data={"l": file_url, "f": filename, "d": todays_date })
+        scraperwiki.sqlite.save(unique_keys=['f'], data={"l": unicode(file_url), "f": filename, "d": todays_date })
         print filename
     else:
         errors += 1
