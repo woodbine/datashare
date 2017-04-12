@@ -10,7 +10,8 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 
 #### FUNCTIONS 1.2
-import requests      # import requests to validate filetype
+
+import requests    #  import requests to validate url
 
 def validateFilename(filename):
     filenameregex = '^[a-zA-Z0-9]+_[a-zA-Z0-9]+_[a-zA-Z0-9]+_[0-9][0-9][0-9][0-9]_[0-9QY][0-9]$'
@@ -36,33 +37,30 @@ def validateFilename(filename):
         return True
 
 
-def validateURL(url, requestdata):
-
+def validateURL(url):
     try:
-        r = requests.post(url, data= requestdata, allow_redirects=True, timeout=20)
+        r = urllib2.urlopen(url)
         count = 1
-        while r.status_code == 500 and count < 4:
+        while r.getcode() == 500 and count < 4:
             print ("Attempt {0} - Status code: {1}. Retrying.".format(count, r.status_code))
             count += 1
-            r = requests.post(url, data= requestdata, allow_redirects=True, timeout=20)
+            r = urllib2.urlopen(url)
         sourceFilename = r.headers.get('Content-Disposition')
-        ext = 0
         if sourceFilename:
-            ext = os.path.splitext(sourceFilename)[1].replace('"', '').replace(';', '').replace(' ', '')[:4]
-        if not ext:
+            ext = os.path.splitext(sourceFilename)[1].replace('"', '').replace(';', '').replace(' ', '')
+        else:
             ext = os.path.splitext(url)[1]
-        if r.status_code == 405:
-            r = requests.get(url, timeout=20)
-        validURL = r.status_code == 200
-        validFiletype = ext.lower() in ['.csv', '.CSV', '.xls', '.xlsx', '.zip']
+        validURL = r.getcode() == 200
+        validFiletype = ext.lower() in ['.csv', '.xls', '.xlsx']
         return validURL, validFiletype
     except:
         print ("Error validating URL.")
         return False, False
 
-def validate(filename, file_url, requestdata):
+
+def validate(filename, file_url):
     validFilename = validateFilename(filename)
-    validURL, validFiletype = validateURL(file_url, requestdata)
+    validURL, validFiletype = validateURL(file_url)
     if not validFilename:
         print filename, "*Error: Invalid filename*"
         print file_url
@@ -86,60 +84,128 @@ def convert_mth_strings ( mth_string ):
 
 #### VARIABLES 1.0
 
-entity_id = "E5022_WCC_gov"
-url = "http://www.spotlightonspend.org.uk/259/City+of+Westminster+Council/Downloads"
-new_url = 'https://www.westminster.gov.uk/spending-procurement-and-data-transparency'
-user_agent = {'User-agent': 'Mozilla/5.0'}
+entity_id = "datashare"
+urls = ["http://data.peterborough.gov.uk/api/commercial-activities/transparency-code-payments-over-500",
+        "http://data.bracknell-forest.gov.uk/api/finance/payments-over-500", "http://data.wolverhampton.gov.uk/api/finance",
+        "http://data.hounslow.gov.uk/api/finance-and-assets/council-spending-over-500",
+        "http://datashare.blackburn.gov.uk/api/expenditure-exceeding-500"]
 errors = 0
 data = []
-
+url="http://example.com"
 
 #### READ HTML 1.0
 
-html = requests.get(url, headers=user_agent)
-soup = BeautifulSoup(html.text, 'lxml')
+html = urllib2.urlopen(url)
+soup = BeautifulSoup(html, 'lxml')
+
 
 #### SCRAPE DATA
 
-blocks = soup.find_all('td', 'treeMonthlyFiles_1')
-for block in blocks:
-    csvfile = block.find('a')['href'].split('_')[-1].split('.')[0]
-    url_csv = block.find('a')['href']
-    if 'document' not in csvfile:
-        csv_data = url_csv.split("javascript:fnRequestFile('")[-1].split("');")[0]
-        requestdata = {'treeMonthlyFiles_ExpandState': 'cnnnnnnnnncnnnnnnnnnnnnennnnnnnnnnnncnnn', 'treeMonthlyFiles_SelectedNode':'', '__EVENTTARGET':'', '__EVENTARGUMENT':'', 'treeMonthlyFiles_PopulateLog':'', 'treeContractFiles_ExpandState':'n', 'treeContractFiles_SelectedNode': '', 'treeContractFiles_PopulateLog':'', '__VIEWSTATE':'/wEPDwUIMzUyNzY2NjkPZBYCZg9kFgICAw9kFggCAQ8PFgIeC05hdmlnYXRlVXJsBSEvMjU5L0NpdHkrb2YrV2VzdG1pbnN0ZXIrQ291bmNpbC9kZAIFDxYCHgRUZXh0BRtDaXR5IG9mIFdlc3RtaW5zdGVyIENvdW5jaWxkAgsPZBYMAgcPFgIfAQXuCTxwPnNwb3RsaWdodG9uc3BlbmQgaXMgYW4gaW5ub3ZhdGl2ZSBvbmxpbmUgcGxhdGZvcm0gdGhhdCBzZWVrcyB0byBkZWxpdmVyIG1lYW5pbmdmdWwgdmlzaWJpbGl0eSBvZiBwdWJsaWMgc2VjdG9yIHNwZW5kaW5nIG9uIGdvb2RzICZhbXA7IHNlcnZpY2VzLiBUbyB0aGF0IGVuZCwgc2lnbmlmaWNhbnQgZWZmb3J0IGlzIHJlcXVpcmVkIHRvIGltcHJvdmUgdGhlIHJhdyBmaW5hbmNpYWwgZGF0YSBzdWNoIHRoYXQgaXQgaXMgYWNjZXNzaWJsZSwgcmVsZXZhbnQgYW5kIG9mIHZhbHVlIHRvIHRoZSBnZW5lcmFsIHB1YmxpYy4gVGhlIHdvcmsgdG8gZWZmZWN0IHRoZSBkYXRhIGltcHJvdmVtZW50IGlzIHVuZGVydGFrZW4gYnkgU3Bpa2VzIENhdmVsbCDigJMgYSBwcml2YXRlIHNlY3RvciBvcmdhbml6YXRpb24gdGhhdCB0cmFuc2Zvcm1zIGFuZCBhbmFseXplcyBzcGVuZCBhbmQgcmVsYXRlZCBkYXRhIGZvciBtb3JlIHRoYW4gMSwwMDAgcHVibGljIHNlY3RvciBib2RpZXMgd29ybGR3aWRlIHRvIGhlbHAgdGhlbSBzYXZlIG1vbmV5LCBhZGRyZXNzIGltcG9ydGFudCBwb2xpY3kgcmVsYXRlZCBxdWVzdGlvbnMgYW5kLCBhcyBhIGJpLXByb2R1Y3Qgb2YgdGhvc2UgZWZmb3J0cywgZmFjaWxpdGF0ZSB0aGUgZGVsaXZlcnkgb2YgdHJhbnNwYXJlbmN5LjwvcD48cD5UaGUgZnVuY3Rpb25hbGl0eSBvbiB0aGlzIGFuZCByZWxhdGVkIHBhZ2VzIGVuYWJsZXMgdGhlIGRvd25sb2FkIG9mIHRoZSB0cmFuc2FjdGlvbnMgYWJvdmUgJiMzNjs1MDAgaW4gdmFsdWUgYmVmb3JlIGFueSBjbGVhbnNpbmcsIGVucmljaG1lbnQsIGFnZ3JlZ2F0aW9uIG9yIG90aGVyIGRhdGEgaW1wcm92ZW1lbnQgaGFzIGJlZW4gbWFkZSBieSBTcGlrZXMgQ2F2ZWxsIG90aGVyIHRoYW47PC9wPjx1bD48bGk+dGhlIGlkZW50aWZpY2F0aW9uIGFuZCByZWRhY3Rpb24gb2YgcGF5bWVudHMgbWFkZSB0byBpbmRpdmlkdWFscyw8L2xpPjxsaT5zdGFuZGFyZGl6YXRpb24gb2YgdGhlIGZpbGUgZm9ybWF0IChpbmNsdWRpbmcgY29sdW1uIGhlYWRpbmdzIGFuZCBwb3NpdGlvbnMpLjwvbGk+PC91bD48cD5UaGUgY29weXJpZ2h0IGluIHRoZSByYXcgZmluYW5jaWFsIGRhdGEgaXMgb3duZWQgYnkgQ2l0eSBvZiBXZXN0bWluc3RlciBDb3VuY2lsICh0aGUgJnF1b3Q7RGF0YSBQcm92aWRlciZxdW90Oykgd2hvIGhhdmUgZWxlY3RlZCB0byBtYWtlIHRoZSByYXcgZmluYW5jaWFsIGRhdGEgZnJlZWx5LXJldXNhYmxlIGJ5IHRoZSBnZW5lcmFsIHB1YmxpYy48L3A+ZAINDw8WAh8ABQ4vRG93bmxvYWRzLzI1OWRkAg8PFgIfAQXIAUFueSBxdWVzdGlvbnMgeW91IG1heSBoYXZlIHdpdGggcmVnYXJkcyB0byB0aGUgZGF0YSBwcm92aWRlZCBpbiB0aGlzIGRvd25sb2FkIHNlY3Rpb24sIHRoZW4gcGxlYXNlIGNvbnRhY3QgdGhlIGRhdGEgb3duZXIgPGEgaHJlZj0iLzI1OS9DaXR5K29mK1dlc3RtaW5zdGVyK0NvdW5jaWwvQnV5aW5nL0tleUZhY3RzUGVvcGxlIj5kaXJlY3RseTwvYT4uZAIVDw8WAh8ABS8vMjU5L0NpdHkrb2YrV2VzdG1pbnN0ZXIrQ291bmNpbC9CdXlpbmcvU3VtbWFyeWRkAiUPDxYCHwAFKi8yNTkvQ2l0eStvZitXZXN0bWluc3RlcitDb3VuY2lsL0Fib3V0RGF0YWRkAicPFgIeB1Zpc2libGVnFgICAg8PFgIfAAU8LzI1OS9DaXR5K29mK1dlc3RtaW5zdGVyK0NvdW5jaWwvRG93bmxvYWRzL0FkZGl0aW9uYWxGaWd1cmVzZGQCEQ8WAh8BBUQmY29weTsgMjAxNiA8c3Ryb25nPnNwb3RsaWdodG9uc3BlbmQ8L3N0cm9uZz4uICBBbGwgcmlnaHRzIHJlc2VydmVkLmQYAQUeX19Db250cm9sc1JlcXVpcmVQb3N0QmFja0tleV9fFgEFImN0bDAwJFNpdGVDb250ZW50JHRyZWVNb250aGx5RmlsZXN5YmuQAajZGUBXvEdCJuOecO56nQ==', '__VIEWSTATEGENERATOR':'BBE16BD4', '__EVENTVALIDATION': '/wEdAAKD7C9MHe7QXeJuZkH2vS93Mq7+XPodPdKcQ/RQ+ItsENLS5F+w/BFhfwX8DhbkeithGqXN', 'ctl00$SiteContent$requestedFileName':'{}'.format(csv_data)}
-        csvYr = csvfile[-4:]
-        csvMth = csvfile[:3]
-        csvMth = convert_mth_strings(csvMth.upper())
-        data.append([csvYr, csvMth, url, requestdata])
-new_html = urllib2.urlopen(new_url)
-archive_soup = BeautifulSoup(new_html, 'lxml')
-rows = archive_soup.find_all('div', id=re.compile('procurement-\d+-\d+'))
-for row in rows:
-    links = row.find_all('a')
-    for link in links:
-        url = link['href']
-        if 'xpenditure' in url or 'expendidure' in url or 'q1_final.xlsx' in url or\
-                'december_14_v1' in url or 'q4_-_from_karim.xlsx' in url:
-                title = link.text.strip()
-                csvYr = re.search('(\d{4})', row['id']).group(1)
-                csvMth = title.split()[0]
-                requestdata = None
-                data.append([csvYr, csvMth, url, requestdata])
+for url in urls:
+    if 'peterborough.gov.uk' in url:
+        entity_id = "E0501_PCC_gov"
+        html = urllib2.urlopen(url)
+        soup = BeautifulSoup(html, 'lxml')
+        restdataset = soup.select('restdataset')
+        for restdata in restdataset:
+            link = restdata.select_one('friendlyurl').text.replace('/XML', '/csv')
+            title = restdata.select_one('title').text.split()
+            csvMth = title[-2][:3]
+            csvYr = title[-1]
+            csvMth = convert_mth_strings(csvMth.upper())
+            data.append([csvYr, csvMth, link])
+    if 'bracknell-forest.gov.uk' in url:
+        entity_id = "E0301_BFBC_gov"
+        html = urllib2.urlopen(url)
+        soup = BeautifulSoup(html, 'lxml')
+        restdataset = soup.select('restdataset')
+        for restdata in restdataset:
+            link = restdata.select_one('friendlyurl').text.replace('/XML', '/csv')
+            title = restdata.select_one('title').text
+            csvMth = title.split()[-2][:3]
+            csvYr = title.split()[-1]
+            if "to" in title:
+                if 'January to March' in title:
+                    csvMth = 'Q1'
+                if 'April to June' in title:
+                    csvMth = 'Q2'
+                if 'July to September' in title:
+                    csvMth = 'Q3'
+                if 'October to December' in title:
+                    csvMth = 'Q4'
+                else:
+                    csvMth = 'Q0'
+            if 'September' in csvYr:
+                csvYr = '2015'
+            csvMth = convert_mth_strings(csvMth.upper())
+            data.append([csvYr, csvMth, link])
+    if 'hounslow.gov.uk' in url:
+        entity_id = 'E5042_HLBC_gov'
+        html = urllib2.urlopen(url)
+        soup = BeautifulSoup(html, 'lxml')
+        restdataset = soup.select('restdataset')
+        for restdata in restdataset:
+            link = restdata.select_one('friendlyurl').text.replace('/XML', '/csv')
+            title = restdata.select_one('title').text.split()
+            csvMth = title[-2][:3]
+            csvYr = title[-1]
+            if '20' not in csvYr and '20' in csvMth:
+                csvYr = title[-2]
+                csvMth = 'Y1'
+            if u'£50' in csvMth:
+                csvMth='May'
+            if 'October November 2015' in restdata.select_one('title').text:
+                csvMth='Q0'
+            if 'September 2010 to March 2011' in restdata.select_one('title').text:
+                csvMth = 'Q0'
+            if '20' not in csvYr:
+                csvYr = '20'+csvYr
+            csvMth = convert_mth_strings(csvMth.upper())
+            data.append([csvYr, csvMth, link])
+    if 'blackburn.gov.uk' in url:
+        entity_id = 'E2301_BWDBC_gov'
+        proxy = urllib2.ProxyHandler({'http': 'http://176.126.245.23:3128'})
+        opener = urllib2.build_opener(proxy)
+        urllib2.install_opener(opener)
+        html = urllib2.urlopen(url)
+        # headers = {'User-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36 OPR/42.0.2393.94',
+        #            'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'}
+        # proxy = {'http':'http://176.126.245.23:3128'}
+        # page = requests.get(url, proxies=proxy, headers=headers)
+        soup = BeautifulSoup(html, 'lxml')
+        restdataset = soup.select('restschema')
+        for restdata in restdataset:
+            friendlyurl = restdata.select_one('friendlyurl')
+            title = restdata.select_one('title').text
+            path_link = friendlyurl.text
+            html = urllib2.urlopen(url+'/'+path_link)
+            # html = requests.get(url+'/'+path_link, proxies=proxy)
+            soup = BeautifulSoup(html, 'lxml')
+            # soup = BeautifulSoup(html, 'lxml')
+            restdataset = soup.select('restdataset')
+            for restdata in restdataset:
+                link = restdata.select_one('friendlyurl').text.replace('/XML', '/csv')
+                title = restdata.select_one('title').text
+                csvYr = title[:4]
+                csvMth = 'Y1'
+                csvMth = convert_mth_strings(csvMth.upper())
+                data.append([csvYr, csvMth, link])
+
 
 #### STORE DATA 1.0
 
 for row in data:
-    csvYr, csvMth, url, requestdata = row
+    csvYr, csvMth, url = row
     filename = entity_id + "_" + csvYr + "_" + csvMth
     todays_date = str(datetime.now())
     file_url = url.strip()
 
-    valid = validate(filename, file_url, requestdata)
+    valid = validate(filename, file_url)
 
     if valid == True:
-        scraperwiki.sqlite.save(unique_keys=['f'], data={"l": unicode(file_url), "f": filename, "d": todays_date })
+        scraperwiki.sqlite.save(unique_keys=['f'], data={"l": file_url, "f": filename, "d": todays_date })
         print filename
+
     else:
         errors += 1
 
