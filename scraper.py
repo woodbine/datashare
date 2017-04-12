@@ -86,7 +86,7 @@ def convert_mth_strings ( mth_string ):
 
 entity_id = "datashare"
 urls = ["http://data.peterborough.gov.uk/api/commercial-activities/transparency-code-payments-over-500",
-        "http://data.bracknell-forest.gov.uk/api/finance/payments-over-500", "http://data.wolverhampton.gov.uk/api/finance",
+        "http://data.bracknell-forest.gov.uk/api/finance/payments-over-500",
         "http://data.hounslow.gov.uk/api/finance-and-assets/council-spending-over-500",
         "http://datashare.blackburn.gov.uk/api/expenditure-exceeding-500"]
 errors = 0
@@ -113,7 +113,7 @@ for url in urls:
             csvMth = title[-2][:3]
             csvYr = title[-1]
             csvMth = convert_mth_strings(csvMth.upper())
-            data.append([csvYr, csvMth, link])
+            data.append([csvYr, csvMth, link, entity_id])
     if 'bracknell-forest.gov.uk' in url:
         entity_id = "E0301_BFBC_gov"
         html = urllib2.urlopen(url)
@@ -138,7 +138,7 @@ for url in urls:
             if 'September' in csvYr:
                 csvYr = '2015'
             csvMth = convert_mth_strings(csvMth.upper())
-            data.append([csvYr, csvMth, link])
+            data.append([csvYr, csvMth, link, entity_id])
     if 'hounslow.gov.uk' in url:
         entity_id = 'E5042_HLBC_gov'
         html = urllib2.urlopen(url)
@@ -161,7 +161,7 @@ for url in urls:
             if '20' not in csvYr:
                 csvYr = '20'+csvYr
             csvMth = convert_mth_strings(csvMth.upper())
-            data.append([csvYr, csvMth, link])
+            data.append([csvYr, csvMth, link, entity_id])
     if 'blackburn.gov.uk' in url:
         entity_id = 'E2301_BWDBC_gov'
         proxy = urllib2.ProxyHandler({'http': 'http://176.126.245.23:3128'})
@@ -189,13 +189,13 @@ for url in urls:
                 csvYr = title[:4]
                 csvMth = 'Y1'
                 csvMth = convert_mth_strings(csvMth.upper())
-                data.append([csvYr, csvMth, link])
+                data.append([csvYr, csvMth, link, entity_id])
 
 
 #### STORE DATA 1.0
 
 for row in data:
-    csvYr, csvMth, url = row
+    csvYr, csvMth, url, entity_id = row
     filename = entity_id + "_" + csvYr + "_" + csvMth
     todays_date = str(datetime.now())
     file_url = url.strip()
