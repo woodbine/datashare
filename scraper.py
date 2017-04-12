@@ -9,9 +9,8 @@ import urllib2
 from datetime import datetime
 from bs4 import BeautifulSoup
 
-#### FUNCTIONS 1.2
+#### FUNCTIONS 1.0
 
-import requests    #  import requests to validate url
 
 def validateFilename(filename):
     filenameregex = '^[a-zA-Z0-9]+_[a-zA-Z0-9]+_[a-zA-Z0-9]+_[0-9][0-9][0-9][0-9]_[0-9QY][0-9]$'
@@ -164,14 +163,7 @@ for url in urls:
             data.append([csvYr, csvMth, link, entity_id])
     if 'blackburn.gov.uk' in url:
         entity_id = 'E2301_BWDBC_gov'
-        proxy = urllib2.ProxyHandler({'http': 'http://176.126.245.23:3128'})
-        opener = urllib2.build_opener(proxy)
-        urllib2.install_opener(opener)
         html = urllib2.urlopen(url)
-        # headers = {'User-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36 OPR/42.0.2393.94',
-        #            'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'}
-        # proxy = {'http':'http://176.126.245.23:3128'}
-        # page = requests.get(url, proxies=proxy, headers=headers)
         soup = BeautifulSoup(html, 'lxml')
         restdataset = soup.select('restschema')
         for restdata in restdataset:
@@ -179,9 +171,7 @@ for url in urls:
             title = restdata.select_one('title').text
             path_link = friendlyurl.text
             html = urllib2.urlopen(url+'/'+path_link)
-            # html = requests.get(url+'/'+path_link, proxies=proxy)
             soup = BeautifulSoup(html, 'lxml')
-            # soup = BeautifulSoup(html, 'lxml')
             restdataset = soup.select('restdataset')
             for restdata in restdataset:
                 link = restdata.select_one('friendlyurl').text.replace('/XML', '/csv')
