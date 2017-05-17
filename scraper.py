@@ -115,7 +115,7 @@ for url in urls:
             csvYr = title[-1]
             csvMth = convert_mth_strings(csvMth.upper())
             data.append([csvYr, csvMth, link, entity_id])
-    if 'http://data.n-somerset.gov.uk' in url:
+    if 'data.n-somerset.gov.uk' in url:
         entity_id = "E0104_NSC_gov"
         html = urllib2.urlopen(url)
         soup = BeautifulSoup(html, 'lxml')
