@@ -178,14 +178,14 @@ for url in urls:
             data.append([csvYr, csvMth, link, entity_id])
     if 'blackburn.gov.uk' in url:
         entity_id = 'E2301_BWDBC_gov'
-        proxy = urllib2.ProxyHandler({'http': 'http://176.126.245.23:3128'})
-        opener = urllib2.build_opener(proxy)
-        urllib2.install_opener(opener)
-        html = urllib2.urlopen(url)
+        #proxy = urllib2.ProxyHandler({'http': 'http://176.126.245.23:3128'})
+        #opener = urllib2.build_opener(proxy)
+        #urllib2.install_opener(opener)
+        #html = urllib2.urlopen(url)
         # headers = {'User-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36 OPR/42.0.2393.94',
         #            'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'}
-        # proxy = {'http':'http://176.126.245.23:3128'}
-        # page = requests.get(url, proxies=proxy, headers=headers)
+        proxy = {'http':'http://176.126.245.23:3128'}
+        page = requests.get(url, proxies=proxy)
         soup = BeautifulSoup(html, 'lxml')
         restdataset = soup.select('restschema')
         for restdata in restdataset:
