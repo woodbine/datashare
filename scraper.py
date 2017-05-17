@@ -86,6 +86,7 @@ def convert_mth_strings ( mth_string ):
 
 entity_id = "datashare"
 urls = ["http://data.peterborough.gov.uk/api/commercial-activities/transparency-code-payments-over-500",
+        "http://data.n-somerset.gov.uk/api/finance/north-somerset-council-spend-over-250",
         "http://data.bracknell-forest.gov.uk/api/finance/payments-over-500",
         "http://data.hounslow.gov.uk/api/finance-and-assets/council-spending-over-500",
         "http://datashare.blackburn.gov.uk/api/expenditure-exceeding-500"]
@@ -112,6 +113,18 @@ for url in urls:
             title = restdata.select_one('title').text.split()
             csvMth = title[-2][:3]
             csvYr = title[-1]
+            csvMth = convert_mth_strings(csvMth.upper())
+            data.append([csvYr, csvMth, link, entity_id])
+    if 'http://data.n-somerset.gov.uk' in url:
+        entity_id = "E0104_NSC_gov"
+        html = urllib2.urlopen(url)
+        soup = BeautifulSoup(html, 'lxml')
+        restdataset = soup.select('restdataset')
+        for restdata in restdataset:
+            link = restdata.select_one('friendlyurl').text.replace('/XML', '/csv')
+            title = restdata.select_one('title').text.replace(u'Â', '')
+            csvMth = 'Y1'
+            csvYr = restdata.select_one('dateupdated').text.split('-')[0]
             csvMth = convert_mth_strings(csvMth.upper())
             data.append([csvYr, csvMth, link, entity_id])
     if 'bracknell-forest.gov.uk' in url:
