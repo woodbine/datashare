@@ -178,7 +178,7 @@ for url in urls:
             data.append([csvYr, csvMth, link, entity_id])
     if 'blackburn.gov.uk' in url:
         entity_id = 'E2301_BWDBC_gov'
-        proxy = urllib2.ProxyHandler({'http': '91.194.42.51:80'})
+        proxy = urllib2.ProxyHandler({'http': '138.68.172.201:8118'})
         opener = urllib2.build_opener(proxy)
         urllib2.install_opener(opener)
         html = urllib2.urlopen(url)
