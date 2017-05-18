@@ -9,8 +9,9 @@ import urllib2
 from datetime import datetime
 from bs4 import BeautifulSoup
 
-#### FUNCTIONS 1.0
+#### FUNCTIONS 1.2
 
+import requests    #  import requests to validate url
 
 def validateFilename(filename):
     filenameregex = '^[a-zA-Z0-9]+_[a-zA-Z0-9]+_[a-zA-Z0-9]+_[0-9][0-9][0-9][0-9]_[0-9QY][0-9]$'
@@ -50,7 +51,7 @@ def validateURL(url):
         else:
             ext = os.path.splitext(url)[1]
         validURL = r.getcode() == 200
-        validFiletype = ext.lower() in ['.csv', '.xls', '.xlsx']
+        validFiletype = ext.lower() in ['.csv', '.xls', '.xlsx', '/csv']
         return validURL, validFiletype
     except:
         print ("Error validating URL.")
@@ -85,6 +86,7 @@ def convert_mth_strings ( mth_string ):
 
 entity_id = "datashare"
 urls = ["http://data.peterborough.gov.uk/api/commercial-activities/transparency-code-payments-over-500",
+        "http://data.n-somerset.gov.uk/api/finance/north-somerset-council-spend-over-250",
         "http://data.bracknell-forest.gov.uk/api/finance/payments-over-500",
         "http://data.hounslow.gov.uk/api/finance-and-assets/council-spending-over-500",
         "http://datashare.blackburn.gov.uk/api/expenditure-exceeding-500"]
@@ -113,6 +115,18 @@ for url in urls:
             csvYr = title[-1]
             csvMth = convert_mth_strings(csvMth.upper())
             data.append([csvYr, csvMth, link, entity_id])
+    if 'data.n-somerset.gov.uk' in url:
+        entity_id = "E0104_NSC_gov"
+        html = urllib2.urlopen(url)
+        soup = BeautifulSoup(html, 'lxml')
+        restdataset = soup.select('restdataset')
+        for restdata in restdataset:
+            link = restdata.select_one('friendlyurl').text.replace('/XML', '/csv')
+            title = restdata.select_one('title').text.replace(u'Â', '')
+            csvMth = 'Y1'
+            csvYr = restdata.select_one('dateupdated').text.split('-')[0]
+            csvMth = convert_mth_strings(csvMth.upper())
+            data.append([csvYr, csvMth, link, entity_id])
     if 'bracknell-forest.gov.uk' in url:
         entity_id = "E0301_BFBC_gov"
         html = urllib2.urlopen(url)
@@ -123,17 +137,18 @@ for url in urls:
             title = restdata.select_one('title').text
             csvMth = title.split()[-2][:3]
             csvYr = title.split()[-1]
-            if "to" in title:
+            if "to " in title:
                 if 'January to March' in title:
                     csvMth = 'Q1'
-                if 'April to June' in title:
+                elif 'April to June' in title:
                     csvMth = 'Q2'
-                if 'July to September' in title:
+                elif 'July to September' in title:
                     csvMth = 'Q3'
-                if 'October to December' in title:
+                elif 'October to December' in title:
                     csvMth = 'Q4'
                 else:
                     csvMth = 'Q0'
+
             if 'September' in csvYr:
                 csvYr = '2015'
             csvMth = convert_mth_strings(csvMth.upper())
@@ -163,7 +178,14 @@ for url in urls:
             data.append([csvYr, csvMth, link, entity_id])
     if 'blackburn.gov.uk' in url:
         entity_id = 'E2301_BWDBC_gov'
-        html = urllib2.urlopen(url)
+        #proxy = urllib2.ProxyHandler({'http': 'http://176.126.245.23:3128'})
+        #opener = urllib2.build_opener(proxy)
+        #urllib2.install_opener(opener)
+        #html = urllib2.urlopen(url)
+        # headers = {'User-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36 OPR/42.0.2393.94',
+        #            'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'}
+        proxy = {'http':'http://176.126.245.23:3128'}
+        page = requests.get(url, proxies=proxy)
         soup = BeautifulSoup(html, 'lxml')
         restdataset = soup.select('restschema')
         for restdata in restdataset:
@@ -171,7 +193,9 @@ for url in urls:
             title = restdata.select_one('title').text
             path_link = friendlyurl.text
             html = urllib2.urlopen(url+'/'+path_link)
+            # html = requests.get(url+'/'+path_link, proxies=proxy)
             soup = BeautifulSoup(html, 'lxml')
+            # soup = BeautifulSoup(html, 'lxml')
             restdataset = soup.select('restdataset')
             for restdata in restdataset:
                 link = restdata.select_one('friendlyurl').text.replace('/XML', '/csv')
